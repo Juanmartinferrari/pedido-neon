@@ -36,7 +36,11 @@
     <label>WhatsApp do cliente *</label>
     <input id="whatsapp" type="tel" placeholder="(11) 90000-0000">
     <label>Entrega *</label>
-    <select id="entrega"><option value="Retirada">Retirada na loja</option><option value="Entrega">Entrega (cliente informa o endereço)</option></select>
+    <select id="entrega">
+      <option value="Retirada">Retirada na loja (o cliente vê o nosso endereço)</option>
+      <option value="Entrega">Entrega/Envio (cliente informa o endereço)</option>
+      <option value="Instalação">Instalação (cliente informa o endereço)</option>
+    </select>
     <label>Nome do cliente / empresa (para a mensagem)</label>
     <input id="cliente" placeholder="Ex.: Café Aurora">
     <button class="btn" id="gerar">Gerar link</button>
@@ -58,16 +62,33 @@ window.API_URL = 'https://script.google.com/macros/s/AKfycbwCLIBXf6us1qhj-F1BVNx
   function R() { this.s = null; this.f = null; }
   R.prototype.withSuccessHandler = function (s) { this.s = s; return this; };
   R.prototype.withFailureHandler = function (f) { this.f = f; return this; };
-  ['lookupCnpj', 'lookupCep', 'submitForm', 'createLink'].forEach(function (fn) {
-    R.prototype[fn] = function () {
-      var self = this, args = Array.prototype.slice.call(arguments);
-      fetch(window.API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ fn: fn, args: args }) })
-        .then(function (r) { return r.json(); })
-        .then(function (j) { if (j.ok) { self.s && self.s(j.result); } else { self.f && self.f(new Error(j.error)); } })
-        .catch(function (e) { self.f && self.f(new Error('Falha de conexão. Verifique sua internet e tente de novo.')); });
-    };
+  function api(fn, args, ok, fail) {
+    fetch(window.API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn: fn, args: args }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j.ok) { ok && ok(j.result); } else { fail && fail(new Error(j.error)); } })
+      .catch(function () { fail && fail(new Error('Falha de conexão. Verifique sua internet e tente de novo.')); });
+  }
+  ['lookupCnpj', 'submitForm', 'createLink'].forEach(function (fn) {
+    R.prototype[fn] = function () { api(fn, Array.prototype.slice.call(arguments), this.s, this.f); };
   });
+  // CEP: consulta direto do navegador (ViaCEP, depois BrasilAPI); se as duas falharem, tenta pelo servidor.
+  R.prototype.lookupCep = function (cep) {
+    var self = this, d = String(cep || '').replace(/\D/g, '');
+    function viaServidor() { api('lookupCep', [d], self.s, self.f); }
+    fetch('https://viacep.com.br/ws/' + d + '/json/', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && !j.erro && j.localidade) return self.s && self.s({ ok: true, logradouro: j.logradouro || '', bairro: j.bairro || '', cidade: j.localidade || '', uf: j.uf || '' });
+        throw new Error('viacep');
+      })
+      .catch(function () {
+        fetch('https://brasilapi.com.br/api/cep/v2/' + d, { credentials: 'omit' })
+          .then(function (r) { if (!r.ok) throw new Error('brasilapi'); return r.json(); })
+          .then(function (j) { self.s && self.s({ ok: true, logradouro: j.street || '', bairro: j.neighborhood || '', cidade: j.city || '', uf: j.state || '' }); })
+          .catch(viaServidor);
+      });
+  };
   window.google = { script: {} };
   Object.defineProperty(window.google.script, 'run', { get: function () { return new R(); } });
   window.loadBoot = function (extra, cb) {

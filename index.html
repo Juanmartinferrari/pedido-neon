@@ -83,16 +83,33 @@ window.API_URL = 'https://script.google.com/macros/s/AKfycbwCLIBXf6us1qhj-F1BVNx
   function R() { this.s = null; this.f = null; }
   R.prototype.withSuccessHandler = function (s) { this.s = s; return this; };
   R.prototype.withFailureHandler = function (f) { this.f = f; return this; };
-  ['lookupCnpj', 'lookupCep', 'submitForm', 'createLink'].forEach(function (fn) {
-    R.prototype[fn] = function () {
-      var self = this, args = Array.prototype.slice.call(arguments);
-      fetch(window.API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ fn: fn, args: args }) })
-        .then(function (r) { return r.json(); })
-        .then(function (j) { if (j.ok) { self.s && self.s(j.result); } else { self.f && self.f(new Error(j.error)); } })
-        .catch(function (e) { self.f && self.f(new Error('Falha de conexão. Verifique sua internet e tente de novo.')); });
-    };
+  function api(fn, args, ok, fail) {
+    fetch(window.API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ fn: fn, args: args }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j.ok) { ok && ok(j.result); } else { fail && fail(new Error(j.error)); } })
+      .catch(function () { fail && fail(new Error('Falha de conexão. Verifique sua internet e tente de novo.')); });
+  }
+  ['lookupCnpj', 'submitForm', 'createLink'].forEach(function (fn) {
+    R.prototype[fn] = function () { api(fn, Array.prototype.slice.call(arguments), this.s, this.f); };
   });
+  // CEP: consulta direto do navegador (ViaCEP, depois BrasilAPI); se as duas falharem, tenta pelo servidor.
+  R.prototype.lookupCep = function (cep) {
+    var self = this, d = String(cep || '').replace(/\D/g, '');
+    function viaServidor() { api('lookupCep', [d], self.s, self.f); }
+    fetch('https://viacep.com.br/ws/' + d + '/json/', { credentials: 'omit' })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j && !j.erro && j.localidade) return self.s && self.s({ ok: true, logradouro: j.logradouro || '', bairro: j.bairro || '', cidade: j.localidade || '', uf: j.uf || '' });
+        throw new Error('viacep');
+      })
+      .catch(function () {
+        fetch('https://brasilapi.com.br/api/cep/v2/' + d, { credentials: 'omit' })
+          .then(function (r) { if (!r.ok) throw new Error('brasilapi'); return r.json(); })
+          .then(function (j) { self.s && self.s({ ok: true, logradouro: j.street || '', bairro: j.neighborhood || '', cidade: j.city || '', uf: j.state || '' }); })
+          .catch(viaServidor);
+      });
+  };
   window.google = { script: {} };
   Object.defineProperty(window.google.script, 'run', { get: function () { return new R(); } });
   window.loadBoot = function (extra, cb) {
@@ -105,11 +122,13 @@ window.API_URL = 'https://script.google.com/macros/s/AKfycbwCLIBXf6us1qhj-F1BVNx
 </script>
 <script>
 function startApp(BOOT) {
-  document.title = BOOT.brand.nome + ' - Confirmação do pedido';
+document.title = BOOT.brand.nome + ' - Confirmação do pedido';
   const B = BOOT;
   document.documentElement.style.setProperty('--brand', B.brand.cor);
   const COLOR_HEX = { 'Amarelo': '#FFD400', 'Azul': '#1E5BFF', 'Branco Frio': '#EAF4FF', 'Branco Quente/Morno': '#FFD9A0', 'Cyano': '#00E5FF',
-    'Laranja': '#FF7A00', 'Rosa': '#FF4FA3', 'Roxo': '#8A2BE2', 'Verde': '#22DD55', 'Vermelho': '#FF2A2A' };
+    'Laranja': '#FF7A00', 'Rosa': '#FF4FA3', 'Roxo': '#8A2BE2', 'Verde': '#22DD55', 'Vermelho': '#FF2A2A',
+    'RGB': 'conic-gradient(#FF2A2A,#FFD400,#22DD55,#00E5FF,#1E5BFF,#FF4FA3,#FF2A2A)' };
+  const glowHex = c => c === 'RGB' ? '#FF4FA3' : COLOR_HEX[c];
   const FIO_HEX = { 'Branco': '#ffffff', 'Preto': '#111111', 'Transparente com fio prata': 'linear-gradient(135deg,#ddd,#888)' };
   // posição de cada ponto sobre a borda da placa (x, y no viewBox 360x230; placa = 60..300 x 35..195)
   const LADO_POS = { 'Canto superior esquerdo': [60, 35, -1, -1], 'Centro em cima': [180, 35, 0, -1], 'Canto superior direito': [300, 35, 1, -1],
@@ -132,7 +151,12 @@ function startApp(BOOT) {
 
   try { const d = localStorage.getItem(DRAFT_KEY); if (d) { const p = JSON.parse(d); p.confirmado = false; p.step = Math.min(p.step || 1, 2); S = Object.assign(S, p); } } catch (e) {}
   const FIXO = !!B.linkId;
-  const RETIRADA = 'Retirada na ' + B.brand.nome;
+  const RETIRADA = 'Retirada na ' + B.brand.nome + (B.enderecoRetirada ? ', ' + B.enderecoRetirada : '');
+  const MOD = FIXO ? (B.entregaFixa || 'Retirada') : '';
+  const MOD_END = { 'Entrega': 'Endereço de entrega/envio', 'Instalação': 'Endereço da instalação', 'Envio': 'Endereço para envio' };
+  const MOD_FIXO = { 'Entrega': 'Entrega/envio no endereço que você informar', 'Instalação': 'Instalação no endereço que você informar',
+    'Envio': 'Envio (transportadora/Correios) para o endereço que você informar' };
+  const MOD_NOME = { 'Entrega': 'Entrega/Envio', 'Instalação': 'Instalação', 'Envio': 'Envio' };
   if (FIXO) { S.orc = B.orc; S.projeto = B.projeto; S.fat.whatsapp = B.whatsappFixo;
     if (B.entregaFixa === 'Retirada') S.fat.entrega = RETIRADA; else if (S.fat.entrega === RETIRADA) S.fat.entrega = 'Mesmo endereço do faturamento'; }
   function saveDraft() { try { const c = JSON.parse(JSON.stringify(S)); c.neons.forEach(n => n.foto = null); localStorage.setItem(DRAFT_KEY, JSON.stringify(c)); } catch (e) {} }
@@ -225,7 +249,7 @@ function startApp(BOOT) {
   }
 
   function fioPicker(n, i) {
-    const corNeon = n.cores.length ? COLOR_HEX[n.cores[0]] : B.brand.cor;
+    const corNeon = n.cores.length ? glowHex(n.cores[0]) : B.brand.cor;
     const corFio = n.corFio === 'Preto' ? '#2a2a2a' : n.corFio === 'Branco' ? '#f2f2f2' : '#c0c0c8';
     const fid = 'glow' + i;
     let svg = '<svg class="fiosvg" viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg">' +
@@ -257,7 +281,7 @@ function startApp(BOOT) {
 
     h += '<div class="q">1. Cor(es) do neon * <small>(pode marcar mais de uma)</small></div><div class="chips">' +
       B.cores.map(c => '<button type="button" class="chip' + (n.cores.indexOf(c) >= 0 ? ' on' : '') + '" data-act="cor" data-i="' + i + '" data-v="' + esc(c) + '"><span class="dot" style="background:' + COLOR_HEX[c] +
-        ';box-shadow:0 0 8px ' + COLOR_HEX[c] + '"></span>' + esc(c) + '</button>').join('') + '</div>' + errHtml('n' + i + 'cores');
+        ';box-shadow:0 0 8px ' + glowHex(c) + '"></span>' + esc(c) + '</button>').join('') + '</div>' + errHtml('n' + i + 'cores');
     if (n.cores.length > 1) h += '<label class="f">Onde vai cada cor? *</label><textarea data-n="' + i + '" data-f="coresOnde" placeholder="Ex.: letras em Rosa, contorno do coração em Branco Frio">' + esc(n.coresOnde) + '</textarea>' + errHtml('n' + i + 'onde');
 
     h += '<div class="q">2. A placa vai ser fixada em qual superfície? *</div><div class="opts">' +
@@ -297,7 +321,7 @@ function startApp(BOOT) {
       h += '<div class="card ref"><h2><span>Referência do pedido</span><span class="lock">🔒 definido pela ' + esc(B.brand.nome) + '</span></h2><table class="reft">' +
         '<tr><td>Orçamento</td><td><b>' + esc(S.orc) + '</b></td></tr><tr><td>Projeto</td><td><b>' + esc(S.projeto) + '</b></td></tr>' +
         '<tr><td>WhatsApp</td><td><b>' + esc(f.whatsapp) + '</b></td></tr>' +
-        '<tr><td>Entrega</td><td><b>' + (B.entregaFixa === 'Entrega' ? 'Entrega no endereço que você informar' : esc(RETIRADA)) + '</b></td></tr></table>' +
+        '<tr><td>' + (MOD === 'Retirada' ? 'Retirada' : esc(MOD_NOME[MOD])) + '</td><td><b>' + (MOD === 'Retirada' ? esc(RETIRADA) : esc(MOD_FIXO[MOD])) + '</b></td></tr></table>' +
         '<div class="hint">Se algum desses dados estiver errado, fale com a gente antes de preencher.</div></div>';
     }
     h += '<div class="card"><h2>Contato</h2>' +
@@ -325,10 +349,10 @@ function startApp(BOOT) {
     if (!f.emailNfIgual) h += '<label class="f">E-mail para a nota fiscal *</label><input type="email" data-k="fat.emailNF" value="' + esc(f.emailNF) + '">' + errHtml('emnf');
     h += '</div>';
 
-    if (!(FIXO && B.entregaFixa === 'Retirada')) h += '<div class="card"><h2>' + (FIXO ? 'Endereço de entrega' : 'Entrega') + '</h2><div class="opts">' +
+    if (!(FIXO && B.entregaFixa === 'Retirada')) h += '<div class="card"><h2>' + (FIXO ? MOD_END[MOD] : 'Entrega') + '</h2><div class="opts">' +
       (FIXO ? ['Mesmo endereço do faturamento', 'Outro endereço'] : ['Mesmo endereço do faturamento', 'Outro endereço', RETIRADA]).map(o => '<button type="button" class="opt' + (f.entrega === o ? ' on' : '') + '" data-act="entrega" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>';
     if (!(FIXO && B.entregaFixa === 'Retirada')) {
-      if (f.entrega === 'Outro endereço') h += '<div class="q">Endereço de entrega</div>' + endFields('d', 'endEntrega', f.endEntrega);
+      if (f.entrega === 'Outro endereço') h += '<div class="q">' + (FIXO ? MOD_END[MOD] : 'Endereço de entrega') + '</div>' + endFields('d', 'endEntrega', f.endEntrega);
       h += '</div>';
     }
     h += '<div class="actions"><span></span><button class="btn" data-act="next1">Continuar</button></div>';
@@ -349,10 +373,11 @@ function startApp(BOOT) {
       tr(f.tipo === 'PJ' ? 'CNPJ' : 'CPF', esc(f.doc)) + tr(f.tipo === 'PJ' ? 'Razão social' : 'Nome completo', esc(f.nomeRazao)) +
       (f.tipo === 'PJ' ? tr('Inscrição Estadual', esc(f.ieSituacao + (f.ieSituacao === 'Contribuinte' ? ': ' + f.ie : ''))) : '') +
       tr('E-mail para NF', esc(f.emailNfIgual ? f.emailContato : f.emailNF)) + tr('Endereço de faturamento', esc(endTxt(f.end))) +
-      tr('Entrega', esc(f.entrega === 'Outro endereço' ? endTxt(f.endEntrega) : f.entrega)) + '</table></div>';
+      (FIXO && MOD !== 'Retirada' ? tr(MOD_NOME[MOD], esc(f.entrega === 'Outro endereço' ? endTxt(f.endEntrega) : 'No mesmo endereço do faturamento'))
+        : tr('Entrega', esc(f.entrega === 'Outro endereço' ? endTxt(f.endEntrega) : f.entrega))) + '</table></div>';
     S.neons.forEach((n, i) => {
       h += '<div class="card rev"><h2><span>Neon ' + (i + 1) + (n.identificacao ? ': ' + esc(n.identificacao) : '') + '</span><button class="btn sec small" data-act="goto2" data-i="' + i + '">Corrigir</button></h2><table>' +
-        tr('Cor(es)', n.cores.map(c => '<span class="dot" style="display:inline-block;vertical-align:middle;width:12px;height:12px;background:' + COLOR_HEX[c] + '"></span> ' + esc(c)).join('<br>')) +
+        tr('Cor(es)', n.cores.map(c => '<span class="dot" style="display:inline-block;vertical-align:middle;width:12px;height:12px;border-radius:50%;background:' + COLOR_HEX[c] + '"></span> ' + esc(c)).join('<br>')) +
         (n.cores.length > 1 ? tr('Onde vai cada cor', esc(n.coresOnde)) : '') +
         tr('Superfície / fixação', esc(supTxt(n))) +
         tr('Saída do fio (vista de frente)', '<b>' + esc(n.ladoFio) + '</b>') +
@@ -361,6 +386,7 @@ function startApp(BOOT) {
         (n.foto ? tr('Foto do local', '<img class="thumb" src="data:' + n.foto.mimeType + ';base64,' + n.foto.base64 + '">') : '') +
         (n.obs ? tr('Observações', esc(n.obs)) : '') + '</table></div>';
     });
+    h += '<div class="info"><b>Próximo passo:</b> ' + esc(B.avisoDesenho || '') + '</div>';
     h += '<label class="confirm"><input type="checkbox" data-act="confirm"' + (S.confirmado ? ' checked' : '') + '><span>' + esc(B.textoConfirmacao) + '</span></label>';
     h += '<div class="actions"><button class="btn sec" data-act="back">Voltar</button><button class="btn" data-act="send"' + (!S.confirmado || sending ? ' disabled' : '') + '>' + (sending ? 'Enviando...' : 'Confirmar e enviar') + '</button></div>';
     return h;
@@ -370,6 +396,7 @@ function startApp(BOOT) {
     app.innerHTML = header() + '<div class="card ok"><div class="big">✅</div><h1>Pedido confirmado!</h1>' +
       '<p>Protocolo <b>' + esc(result.protocolo) + '</b>' + (result.versao > 1 ? ' (versão ' + result.versao + ')' : '') + '<br>' + esc(result.dataHora) + '</p>' +
       '<p class="sub">Enviamos uma cópia com tudo o que você confirmou para <b>' + esc(result.emails.join(', ')) + '</b>. Se não encontrar, olhe a caixa de spam.</p>' +
+      '<p class="sub"><b>Próximo passo:</b> ' + esc(B.avisoDesenho || '') + '</p>' +
       '<p class="sub">Obrigado! A equipe ' + esc(B.brand.nome) + ' segue com você pelo WhatsApp.</p></div>';
     window.scrollTo(0, 0);
   }
