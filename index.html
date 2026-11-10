@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirmação do pedido</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&display=swap">
+<style>
+  :root { --brand: #ff2d95; --bg: #0f0f14; --card: #191922; --line: #2c2c3a; --txt: #f1f1f5; --mut: #a3a3b5; --err: #ff5470; --ok: #2bd67b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt); font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 18px 14px 80px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  header img { max-height: 72px; max-width: 220px; }
+  .brandname { font-size: 22px; font-weight: 800; letter-spacing: .5px; color: #fff; text-shadow: 0 0 10px var(--brand), 0 0 22px var(--brand); }
+  h1 { font-size: 20px; margin: 6px 0 4px; }
+  .sub { color: var(--mut); font-size: 14px; margin: 0 0 14px; }
+  .steps { display: flex; gap: 6px; margin: 12px 0 18px; }
+  .steps div { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
+  .steps div.on { background: var(--brand); box-shadow: 0 0 8px var(--brand); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 17px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .q { margin: 16px 0 6px; font-weight: 700; font-size: 15px; }
+  .q small { font-weight: 400; color: var(--mut); }
+  .hint { color: var(--mut); font-size: 13px; margin-top: 4px; }
+  input[type=text], input[type=email], input[type=tel], textarea, select {
+    width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: #11111a; color: var(--txt); font-size: 16px; font-family: inherit; }
+  textarea { min-height: 64px; resize: vertical; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--brand); border-color: transparent; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+  @media (max-width: 520px) { .row, .row3 { grid-template-columns: 1fr; } }
+  label.f { display: block; font-size: 13px; color: var(--mut); margin: 10px 0 4px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 999px; border: 1px solid var(--line); background: #11111a; cursor: pointer; user-select: none; font-size: 15px; color: var(--txt); }
+  .chip.on { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; flex: 0 0 18px; }
+  .opts { display: grid; gap: 8px; }
+  .opt { display: flex; justify-content: space-between; gap: 10px; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: #11111a; cursor: pointer; color: var(--txt); text-align: left; font-size: 15px; width: 100%; }
+  .opt small { color: var(--mut); }
+  .opt.on { border-color: var(--brand); box-shadow: 0 0 0 1px var(--brand) inset; }
+  .warn { color: #ffc24a; font-size: 13px; margin-top: 6px; }
+  .fiosvg { display: block; width: 100%; max-width: 420px; margin: 6px auto 0; }
+  .fiosvg .pt { cursor: pointer; }
+  .fiosvg .pt circle.hit { fill: transparent; }
+  .fiosvg .pt circle.dot2 { fill: #11111a; stroke: #8a8aa0; stroke-width: 2; transition: all .15s; }
+  .fiosvg .pt:hover circle.dot2 { stroke: #fff; }
+  .fiosvg .pt.on circle.dot2 { fill: var(--brand); stroke: #fff; }
+  .fiosel { text-align: center; margin-top: 4px; font-size: 15px; }
+  .fiosel b { color: #fff; }
+  .btn { display: inline-block; padding: 13px 18px; border-radius: 12px; border: 0; background: var(--brand); color: #fff; font-weight: 700; font-size: 16px; cursor: pointer; }
+  .btn.sec { background: transparent; border: 1px solid var(--line); color: var(--txt); }
+  .btn.small { padding: 7px 11px; font-size: 13px; font-weight: 600; }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  .actions { display: flex; justify-content: space-between; gap: 10px; margin-top: 16px; }
+  .err { color: var(--err); font-size: 13px; margin-top: 4px; }
+  .errbox { background: #3a1220; border: 1px solid var(--err); color: #ffd0da; padding: 10px 12px; border-radius: 10px; margin: 10px 0; font-size: 14px; }
+  .info { background: #1d2340; border: 1px solid #3b4a8f; color: #d8defa; padding: 10px 12px; border-radius: 10px; margin: 10px 0; font-size: 14px; }
+  .rev table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .rev td { padding: 7px 6px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  .rev td:first-child { color: var(--mut); width: 42%; }
+  .confirm { display: flex; gap: 10px; align-items: flex-start; padding: 14px; border: 1px solid var(--brand); border-radius: 12px; margin-top: 10px; cursor: pointer; }
+  .confirm input { width: 22px; height: 22px; margin-top: 2px; flex: 0 0 22px; accent-color: var(--brand); }
+  .ref { border-color: var(--brand); }
+  .ref .lock { font-size: 12px; font-weight: 400; color: var(--mut); }
+  .reft { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .reft td { padding: 6px 4px; border-bottom: 1px solid var(--line); }
+  .reft td:first-child { color: var(--mut); width: 35%; }
+  .lgpd { color: var(--mut); font-size: 12px; margin-top: 18px; text-align: center; }
+  .thumb { max-width: 120px; max-height: 90px; border-radius: 8px; display: block; margin-top: 6px; }
+  .ok { text-align: center; padding: 30px 10px; }
+  .ok .big { font-size: 46px; }
+  .seg { display: flex; gap: 8px; }
+  .seg .opt { justify-content: center; }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><p style="text-align:center;color:#a3a3b5;padding:60px 0">Carregando...</p></div>
+
+<script>
+window.API_URL = 'https://script.google.com/macros/s/AKfycbwCLIBXf6us1qhj-F1BVNx2SPsZOIiWiPRf3g3U7Dn63m-AZmBky9G2csiBilsvPGg/exec';
+(function () {
+  function R() { this.s = null; this.f = null; }
+  R.prototype.withSuccessHandler = function (s) { this.s = s; return this; };
+  R.prototype.withFailureHandler = function (f) { this.f = f; return this; };
+  ['lookupCnpj', 'lookupCep', 'submitForm', 'createLink'].forEach(function (fn) {
+    R.prototype[fn] = function () {
+      var self = this, args = Array.prototype.slice.call(arguments);
+      fetch(window.API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn: fn, args: args }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j.ok) { self.s && self.s(j.result); } else { self.f && self.f(new Error(j.error)); } })
+        .catch(function (e) { self.f && self.f(new Error('Falha de conexão. Verifique sua internet e tente de novo.')); });
+    };
+  });
+  window.google = { script: {} };
+  Object.defineProperty(window.google.script, 'run', { get: function () { return new R(); } });
+  window.loadBoot = function (extra, cb) {
+    var q = location.search ? location.search.slice(1) + '&' : '';
+    fetch(window.API_URL + '?' + q + 'api=1' + (extra || ''), { credentials: 'omit', redirect: 'follow' })
+      .then(function (r) { return r.json(); }).then(cb)
+      .catch(function () { var a = document.getElementById('app') || document.body; a.innerHTML = '<p style="color:#ff8;padding:30px;text-align:center;font-family:Arial">Não foi possível carregar o formulário. Atualize a página.</p>'; });
+  };
+})();
+</script>
+<script>
+function startApp(BOOT) {
+  document.title = BOOT.brand.nome + ' - Confirmação do pedido';
+  const B = BOOT;
+  document.documentElement.style.setProperty('--brand', B.brand.cor);
+  const COLOR_HEX = { 'Amarelo': '#FFD400', 'Azul': '#1E5BFF', 'Branco Frio': '#EAF4FF', 'Branco Quente/Morno': '#FFD9A0', 'Cyano': '#00E5FF',
+    'Laranja': '#FF7A00', 'Rosa': '#FF4FA3', 'Roxo': '#8A2BE2', 'Verde': '#22DD55', 'Vermelho': '#FF2A2A' };
+  const FIO_HEX = { 'Branco': '#ffffff', 'Preto': '#111111', 'Transparente com fio prata': 'linear-gradient(135deg,#ddd,#888)' };
+  // posição de cada ponto sobre a borda da placa (x, y no viewBox 360x230; placa = 60..300 x 35..195)
+  const LADO_POS = { 'Canto superior esquerdo': [60, 35, -1, -1], 'Centro em cima': [180, 35, 0, -1], 'Canto superior direito': [300, 35, 1, -1],
+    'Centro à direita': [300, 115, 1, 0], 'Canto inferior direito': [300, 195, 1, 1], 'Centro embaixo': [180, 195, 0, 1],
+    'Canto inferior esquerdo': [60, 195, -1, 1], 'Centro à esquerda': [60, 115, -1, 0], 'Por trás (centro)': [180, 115, 0, 0] };
+
+  const newNeon = () => ({ identificacao: '', cores: [], coresOnde: '', superficie: '', ripaEspaco: '', ladoFio: '', corFio: '', obs: '', foto: null });
+  const emptyEnd = () => ({ cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '' });
+  const DRAFT_KEY = 'escopo_' + (B.linkId || (B.marca + '_' + (B.orc || 'semorc')));
+
+  let S = {
+    step: 1,
+    orc: B.orc, projeto: B.projeto,
+    neons: [newNeon()],
+    fat: { solicitante: '', whatsapp: '', emailContato: '', emailNfIgual: true, emailNF: '', tipo: 'PJ', doc: '', nomeRazao: B.cliente || '',
+      ieSituacao: '', ie: '', end: emptyEnd(), entrega: 'Mesmo endereço do faturamento', endEntrega: emptyEnd() },
+    confirmado: false
+  };
+  let errors = {}; let topError = ''; let sending = false; let result = null; let cnpjMsg = '';
+
+  try { const d = localStorage.getItem(DRAFT_KEY); if (d) { const p = JSON.parse(d); p.confirmado = false; p.step = Math.min(p.step || 1, 2); S = Object.assign(S, p); } } catch (e) {}
+  const FIXO = !!B.linkId;
+  const RETIRADA = 'Retirada na ' + B.brand.nome;
+  if (FIXO) { S.orc = B.orc; S.projeto = B.projeto; S.fat.whatsapp = B.whatsappFixo;
+    if (B.entregaFixa === 'Retirada') S.fat.entrega = RETIRADA; else if (S.fat.entrega === RETIRADA) S.fat.entrega = 'Mesmo endereço do faturamento'; }
+  function saveDraft() { try { const c = JSON.parse(JSON.stringify(S)); c.neons.forEach(n => n.foto = null); localStorage.setItem(DRAFT_KEY, JSON.stringify(c)); } catch (e) {} }
+  function clearDraft() { try { localStorage.removeItem(DRAFT_KEY); } catch (e) {} }
+
+  const app = document.getElementById('app');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const digits = s => String(s || '').replace(/\D/g, '');
+
+  /* ---------- máscaras e validação ---------- */
+  function maskDoc(v, tipo) {
+    const d = digits(v).slice(0, tipo === 'PJ' ? 14 : 11);
+    if (tipo === 'PJ') return d.replace(/^(\d{2})(\d)/, '$1.$2').replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3').replace(/\.(\d{3})(\d)/, '.$1/$2').replace(/(\d{4})(\d)/, '$1-$2');
+    return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+  }
+  function maskTel(v) { const d = digits(v).slice(0, 11); return d.length > 10 ? d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3') : d.replace(/(\d{2})(\d{0,4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, ''); }
+  function maskCep(v) { return digits(v).slice(0, 8).replace(/(\d{5})(\d)/, '$1-$2'); }
+  function validCpf(v) { const c = digits(v); if (c.length !== 11 || /^(\d)\1+$/.test(c)) return false;
+    for (let t = 9; t < 11; t++) { let s = 0; for (let i = 0; i < t; i++) s += +c[i] * (t + 1 - i); if (((s * 10) % 11) % 10 !== +c[t]) return false; } return true; }
+  function validCnpj(v) { const c = digits(v); if (c.length !== 14 || /^(\d)\1+$/.test(c)) return false;
+    const calc = len => { const w = len === 12 ? [5,4,3,2,9,8,7,6,5,4,3,2] : [6,5,4,3,2,9,8,7,6,5,4,3,2]; let s = 0; for (let i = 0; i < len; i++) s += +c[i] * w[i]; const r = s % 11; return r < 2 ? 0 : 11 - r; };
+    return calc(12) === +c[12] && calc(13) === +c[13]; }
+  const isEmail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || '').trim());
+  const filled = s => String(s == null ? '' : s).trim().length > 0;
+
+  function validateNeons() {
+    const e = {};
+    S.neons.forEach((n, i) => {
+      if (S.neons.length > 1 && !filled(n.identificacao)) e['n' + i + 'id'] = 'Identifique qual é este neon.';
+      if (!n.cores.length) e['n' + i + 'cores'] = 'Escolha pelo menos uma cor.';
+      if (n.cores.length > 1 && !filled(n.coresOnde)) e['n' + i + 'onde'] = 'Diga onde vai cada cor.';
+      if (!n.superficie) e['n' + i + 'sup'] = 'Escolha a superfície.';
+      if (n.superficie === 'Madeira Ripada' && !filled(n.ripaEspaco)) e['n' + i + 'ripa'] = 'Informe o espaçamento entre as ripas.';
+      if (!n.ladoFio) e['n' + i + 'lado'] = 'Escolha o lado de saída do fio.';
+      if (!n.corFio) e['n' + i + 'fio'] = 'Escolha a cor do fio.';
+    });
+    return e;
+  }
+  function validateEnd(prefix, en, e) {
+    if (digits(en.cep).length !== 8) e[prefix + 'cep'] = 'CEP inválido.';
+    if (!filled(en.logradouro)) e[prefix + 'log'] = 'Informe o logradouro.';
+    if (!filled(en.numero)) e[prefix + 'num'] = 'Informe o número (ou S/N).';
+    if (!filled(en.cidade)) e[prefix + 'cid'] = 'Informe a cidade.';
+    if (!/^[A-Za-z]{2}$/.test(en.uf || '')) e[prefix + 'uf'] = 'UF.';
+  }
+  function validateDados() {
+    const f = S.fat, e = {};
+    if (!filled(S.projeto)) e.projeto = 'Informe o nome do projeto.';
+    if (!filled(f.solicitante)) e.sol = 'Informe seu nome.';
+    if (digits(f.whatsapp).length < 10) e.wa = 'Informe o WhatsApp com DDD.';
+    if (!isEmail(f.emailContato)) e.em = 'E-mail inválido.';
+    if (!f.emailNfIgual && !isEmail(f.emailNF)) e.emnf = 'E-mail inválido.';
+    if (f.tipo === 'PJ') {
+      if (!validCnpj(f.doc)) e.doc = 'CNPJ inválido.';
+      if (!f.ieSituacao) e.ies = 'Escolha uma opção.';
+      if (f.ieSituacao === 'Contribuinte' && !filled(f.ie)) e.ie = 'Informe a Inscrição Estadual.';
+    } else if (!validCpf(f.doc)) e.doc = 'CPF inválido.';
+    if (!filled(f.nomeRazao)) e.nome = f.tipo === 'PJ' ? 'Informe a razão social.' : 'Informe o nome completo.';
+    validateEnd('e', f.end, e);
+    if (f.entrega === 'Outro endereço') validateEnd('d', f.endEntrega, e);
+    return e;
+  }
+
+  /* ---------- render ---------- */
+  function errHtml(k) { return errors[k] ? '<div class="err">' + esc(errors[k]) + '</div>' : ''; }
+  function header() {
+    const logo = B.brand.logo ? '<img src="' + esc(B.brand.logo) + '" alt="' + esc(B.brand.nome) + '">' : '<div class="brandname">' + esc(B.brand.nome) + '</div>';
+    const st = [1, 2, 3].map(i => '<div class="' + (S.step >= i ? 'on' : '') + '"></div>').join('');
+    return '<header>' + logo + '</header>' + (S.step <= 3 ? '<div class="steps">' + st + '</div>' : '');
+  }
+
+  function render() {
+    if (result) return renderOk();
+    let h = header();
+    if (topError) h += '<div class="errbox">' + esc(topError) + '</div>';
+    if (S.step === 1) h += renderDados();
+    else if (S.step === 2) h += renderNeons();
+    else h += renderReview();
+    h += '<div class="lgpd">Usaremos estes dados apenas para fabricação, emissão da nota fiscal e entrega (Lei 13.709/2018).</div>';
+    app.innerHTML = h;
+    bind();
+  }
+
+  function renderNeons() {
+    let h = '<h1>Características do neon</h1><p class="sub">Essas informações vão para a nossa ordem de fabricação. Se a compra tiver mais de um neon, adicione um para cada.</p>';
+    S.neons.forEach((n, i) => { h += renderNeon(n, i); });
+    h += '<button class="btn sec" style="width:100%" data-act="addNeon">+ Adicionar outro neon nesta compra</button>';
+    h += '<div class="actions"><button class="btn sec" data-act="back">Voltar</button><button class="btn" data-act="next2">Revisar</button></div>';
+    return h;
+  }
+
+  function fioPicker(n, i) {
+    const corNeon = n.cores.length ? COLOR_HEX[n.cores[0]] : B.brand.cor;
+    const corFio = n.corFio === 'Preto' ? '#2a2a2a' : n.corFio === 'Branco' ? '#f2f2f2' : '#c0c0c8';
+    const fid = 'glow' + i;
+    let svg = '<svg class="fiosvg" viewBox="0 0 360 230" xmlns="http://www.w3.org/2000/svg">' +
+      '<defs><filter id="' + fid + '" x="-30%" y="-60%" width="160%" height="220%"><feGaussianBlur stdDeviation="3.2" result="b1"/><feGaussianBlur stdDeviation="8" result="b2"/>' +
+      '<feMerge><feMergeNode in="b2"/><feMergeNode in="b1"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>' +
+      '<rect x="60" y="35" width="240" height="160" rx="10" fill="#0b0b10" stroke="#55556a" stroke-width="1.5" stroke-dasharray="6 5"/>' +
+      '<text x="180" y="128" text-anchor="middle" font-family="Yellowtail, Brush Script MT, Segoe Script, cursive" font-size="60" fill="none" stroke="' + corNeon +
+        '" stroke-width="2.6" filter="url(#' + fid + ')">Neon</text>' +
+      '<text x="180" y="178" text-anchor="middle" font-family="Arial" font-size="10" fill="#77778a" letter-spacing="2">VISTA DE FRENTE</text>';
+    if (n.ladoFio && LADO_POS[n.ladoFio]) {
+      const p = LADO_POS[n.ladoFio], ex = p[0] + p[2] * 42, ey = p[1] + p[3] * 30 + (p[2] === 0 && p[3] === 0 ? 0 : 0);
+      svg += '<path d="M' + p[0] + ' ' + p[1] + ' Q ' + (p[0] + p[2] * 30) + ' ' + (p[1] + p[3] * 4) + ' ' + ex + ' ' + ey + '" fill="none" stroke="' + corFio + '" stroke-width="3.5" stroke-linecap="round"/>' +
+        '<rect x="' + (ex - 7) + '" y="' + (ey - 5) + '" width="14" height="10" rx="2" fill="#555" transform="rotate(' + (Math.atan2(p[3], p[2]) * 180 / Math.PI) + ' ' + ex + ' ' + ey + ')"/>';
+    }
+    B.lados.forEach(l => {
+      const p = LADO_POS[l]; if (!p) return;
+      svg += '<g class="pt' + (n.ladoFio === l ? ' on' : '') + '" data-act="lado" data-i="' + i + '" data-v="' + esc(l) + '"><title>' + esc(l) + '</title>' +
+        '<circle class="hit" cx="' + p[0] + '" cy="' + p[1] + '" r="20"/><circle class="dot2" cx="' + p[0] + '" cy="' + p[1] + '" r="10"/></g>';
+    });
+    svg += '</svg>';
+    return svg + '<div class="fiosel">' + (n.ladoFio ? 'Fio sai: <b>' + esc(n.ladoFio) + '</b>' : '<span class="hint">Toque no ponto da borda por onde o fio deve sair</span>') + '</div>';
+  }
+
+  function renderNeon(n, i) {
+    const multi = S.neons.length > 1;
+    let h = '<div class="card" id="neon' + i + '"><h2><span>Neon ' + (i + 1) + (n.identificacao ? ': ' + esc(n.identificacao) : '') + '</span>' +
+      (multi ? '<button class="btn sec small" data-act="rmNeon" data-i="' + i + '">Remover</button>' : '') + '</h2>';
+    if (multi) h += '<div class="q">Qual é este neon? *</div><input type="text" data-n="' + i + '" data-f="identificacao" value="' + esc(n.identificacao) + '" placeholder="Ex.: Logo principal, frase da parede, nome do evento">' + errHtml('n' + i + 'id');
+
+    h += '<div class="q">1. Cor(es) do neon * <small>(pode marcar mais de uma)</small></div><div class="chips">' +
+      B.cores.map(c => '<button type="button" class="chip' + (n.cores.indexOf(c) >= 0 ? ' on' : '') + '" data-act="cor" data-i="' + i + '" data-v="' + esc(c) + '"><span class="dot" style="background:' + COLOR_HEX[c] +
+        ';box-shadow:0 0 8px ' + COLOR_HEX[c] + '"></span>' + esc(c) + '</button>').join('') + '</div>' + errHtml('n' + i + 'cores');
+    if (n.cores.length > 1) h += '<label class="f">Onde vai cada cor? *</label><textarea data-n="' + i + '" data-f="coresOnde" placeholder="Ex.: letras em Rosa, contorno do coração em Branco Frio">' + esc(n.coresOnde) + '</textarea>' + errHtml('n' + i + 'onde');
+
+    h += '<div class="q">2. A placa vai ser fixada em qual superfície? *</div><div class="opts">' +
+      Object.keys(B.superficies).map(s => '<button type="button" class="opt' + (n.superficie === s ? ' on' : '') + '" data-act="sup" data-i="' + i + '" data-v="' + esc(s) + '"><span>' + esc(s) + '</span><small>' + esc(B.superficies[s]) + '</small></button>').join('') + '</div>' + errHtml('n' + i + 'sup');
+    if (n.superficie === 'Tem Base') h += '<div class="warn">A base tem valor extra, que será incluído no orçamento.</div>';
+    if (n.superficie === 'Madeira Ripada') h += '<label class="f">Espaçamento entre as ripas *</label><input type="text" data-n="' + i + '" data-f="ripaEspaco" value="' + esc(n.ripaEspaco) + '" placeholder="Ex.: 2 cm">' + errHtml('n' + i + 'ripa');
+
+    h += '<div class="q">3. Olhando a placa de frente, por onde o fio deve sair? * <small>(o lado onde estará a tomada)</small></div>' + fioPicker(n, i) +
+      '<div class="hint" style="text-align:center">Fio com ' + esc(B.fioPadrao) + ' de comprimento (padrão).</div>' + errHtml('n' + i + 'lado');
+
+    h += '<div class="q">4. Cor do fio aparente *</div><div class="chips">' +
+      B.coresFio.map(c => '<button type="button" class="chip' + (n.corFio === c ? ' on' : '') + '" data-act="fio" data-i="' + i + '" data-v="' + esc(c) + '"><span class="dot" style="background:' + FIO_HEX[c] + ';border:1px solid #666"></span>' + esc(c) + '</button>').join('') + '</div>' + errHtml('n' + i + 'fio');
+
+    h += '<div class="q">Foto do local de instalação <small>(opcional)</small></div><input type="file" accept="image/*" data-foto="' + i + '">' +
+      (n.foto ? '<img class="thumb" src="data:' + n.foto.mimeType + ';base64,' + n.foto.base64 + '"><button class="btn sec small" data-act="rmFoto" data-i="' + i + '">Remover foto</button>' : '');
+    h += '<div class="q">Observações <small>(opcional)</small></div><textarea data-n="' + i + '" data-f="obs" placeholder="Algo que precisamos saber?">' + esc(n.obs) + '</textarea>';
+    return h + '</div>';
+  }
+
+  function endFields(prefix, path, en) {
+    return '<div class="row"><div><label class="f">CEP *</label><input type="tel" inputmode="numeric" data-e="' + path + '.cep" value="' + esc(en.cep) + '" placeholder="00000-000">' + errHtml(prefix + 'cep') + '</div><div></div></div>' +
+      '<label class="f">Logradouro *</label><input type="text" data-e="' + path + '.logradouro" value="' + esc(en.logradouro) + '">' + errHtml(prefix + 'log') +
+      '<div class="row"><div><label class="f">Número *</label><input type="text" data-e="' + path + '.numero" value="' + esc(en.numero) + '">' + errHtml(prefix + 'num') + '</div>' +
+      '<div><label class="f">Complemento</label><input type="text" data-e="' + path + '.complemento" value="' + esc(en.complemento) + '"></div></div>' +
+      '<div class="row3"><div><label class="f">Bairro</label><input type="text" data-e="' + path + '.bairro" value="' + esc(en.bairro) + '"></div>' +
+      '<div><label class="f">Cidade *</label><input type="text" data-e="' + path + '.cidade" value="' + esc(en.cidade) + '">' + errHtml(prefix + 'cid') + '</div>' +
+      '<div><label class="f">UF *</label><input type="text" maxlength="2" data-e="' + path + '.uf" value="' + esc(en.uf) + '">' + errHtml(prefix + 'uf') + '</div></div>';
+  }
+
+  function renderDados() {
+    const f = S.fat;
+    let h = '<h1>Confirmação do pedido</h1><p class="sub">Primeiro seus dados e os da nota fiscal, depois as características do neon. Leva poucos minutos.</p>';
+    if (B.versaoAnterior) h += '<div class="info">Já recebemos uma confirmação deste orçamento em ' + esc(B.versaoAnterior.dataHora) + ' (versão ' + B.versaoAnterior.versao +
+      '). Se você enviar de novo, ela será registrada como <b>versão ' + (B.versaoAnterior.versao + 1) + '</b> e passa a valer para a fabricação.</div>';
+    if (B.linkInvalido) h += '<div class="errbox">Este link não é válido. Peça um novo link à nossa equipe pelo WhatsApp.</div>';
+    if (FIXO) {
+      h += '<div class="card ref"><h2><span>Referência do pedido</span><span class="lock">🔒 definido pela ' + esc(B.brand.nome) + '</span></h2><table class="reft">' +
+        '<tr><td>Orçamento</td><td><b>' + esc(S.orc) + '</b></td></tr><tr><td>Projeto</td><td><b>' + esc(S.projeto) + '</b></td></tr>' +
+        '<tr><td>WhatsApp</td><td><b>' + esc(f.whatsapp) + '</b></td></tr>' +
+        '<tr><td>Entrega</td><td><b>' + (B.entregaFixa === 'Entrega' ? 'Entrega no endereço que você informar' : esc(RETIRADA)) + '</b></td></tr></table>' +
+        '<div class="hint">Se algum desses dados estiver errado, fale com a gente antes de preencher.</div></div>';
+    }
+    h += '<div class="card"><h2>Contato</h2>' +
+      '<label class="f">Nome de quem solicita *</label><input type="text" data-k="fat.solicitante" value="' + esc(f.solicitante) + '">' + errHtml('sol') +
+      (FIXO ? '<label class="f">E-mail *</label><input type="email" data-k="fat.emailContato" value="' + esc(f.emailContato) + '">' + errHtml('em')
+        : '<div class="row"><div><label class="f">WhatsApp *</label><input type="tel" data-k="fat.whatsapp" value="' + esc(f.whatsapp) + '" placeholder="(11) 90000-0000">' + errHtml('wa') + '</div>' +
+          '<div><label class="f">E-mail *</label><input type="email" data-k="fat.emailContato" value="' + esc(f.emailContato) + '">' + errHtml('em') + '</div></div>') +
+      '<div class="hint">Você vai receber neste e-mail uma cópia de tudo o que confirmar.</div>' +
+      (FIXO ? '' : '<div class="row"><div><label class="f">Nº do orçamento</label><input type="text" data-k="orc" value="' + esc(S.orc) + '" placeholder="se tiver"' + (B.orc ? ' readonly' : '') + '></div>' +
+      '<div><label class="f">Nome do projeto *</label><input type="text" data-k="projeto" value="' + esc(S.projeto) + '" placeholder="Ex.: Logo da recepção">' + errHtml('projeto') + '</div></div>') + '</div>';
+
+    h += '<div class="card"><h2>Nota fiscal</h2><div class="seg">' +
+      ['PJ', 'PF'].map(t => '<button type="button" class="opt' + (f.tipo === t ? ' on' : '') + '" data-act="tipo" data-v="' + t + '">' + (t === 'PJ' ? 'CNPJ (empresa)' : 'CPF (pessoa física)') + '</button>').join('') + '</div>' +
+      '<label class="f">' + (f.tipo === 'PJ' ? 'CNPJ' : 'CPF') + ' *</label><input type="tel" inputmode="numeric" data-k="fat.doc" value="' + esc(f.doc) + '">' + errHtml('doc') +
+      (cnpjMsg ? '<div class="hint">' + esc(cnpjMsg) + '</div>' : '') +
+      '<label class="f">' + (f.tipo === 'PJ' ? 'Razão social' : 'Nome completo') + ' *</label><input type="text" data-k="fat.nomeRazao" value="' + esc(f.nomeRazao) + '">' + errHtml('nome');
+    if (f.tipo === 'PJ') {
+      h += '<div class="q">Inscrição Estadual *</div><div class="opts">' +
+        [['Contribuinte', 'Tem IE e é contribuinte de ICMS'], ['Isento', 'Inscrito, mas isento de IE'], ['Não contribuinte', 'Não tem Inscrição Estadual']]
+          .map(o => '<button type="button" class="opt' + (f.ieSituacao === o[0] ? ' on' : '') + '" data-act="ies" data-v="' + o[0] + '"><span>' + o[0] + '</span><small>' + o[1] + '</small></button>').join('') + '</div>' + errHtml('ies');
+      if (f.ieSituacao === 'Contribuinte') h += '<label class="f">Número da IE *</label><input type="text" data-k="fat.ie" value="' + esc(f.ie) + '">' + errHtml('ie');
+    }
+    h += '<div class="q">Endereço de faturamento</div>' + endFields('e', 'end', f.end);
+    h += '<label class="confirm" style="border-color:var(--line);margin-top:14px"><input type="checkbox" data-act="nfIgual"' + (f.emailNfIgual ? ' checked' : '') + '><span>Enviar a nota fiscal para o mesmo e-mail de contato</span></label>';
+    if (!f.emailNfIgual) h += '<label class="f">E-mail para a nota fiscal *</label><input type="email" data-k="fat.emailNF" value="' + esc(f.emailNF) + '">' + errHtml('emnf');
+    h += '</div>';
+
+    if (!(FIXO && B.entregaFixa === 'Retirada')) h += '<div class="card"><h2>' + (FIXO ? 'Endereço de entrega' : 'Entrega') + '</h2><div class="opts">' +
+      (FIXO ? ['Mesmo endereço do faturamento', 'Outro endereço'] : ['Mesmo endereço do faturamento', 'Outro endereço', RETIRADA]).map(o => '<button type="button" class="opt' + (f.entrega === o ? ' on' : '') + '" data-act="entrega" data-v="' + esc(o) + '">' + esc(o) + '</button>').join('') + '</div>';
+    if (!(FIXO && B.entregaFixa === 'Retirada')) {
+      if (f.entrega === 'Outro endereço') h += '<div class="q">Endereço de entrega</div>' + endFields('d', 'endEntrega', f.endEntrega);
+      h += '</div>';
+    }
+    h += '<div class="actions"><span></span><button class="btn" data-act="next1">Continuar</button></div>';
+    return h;
+  }
+
+  function endTxt(e) { return [e.logradouro + ', ' + e.numero + (e.complemento ? ' - ' + e.complemento : ''), e.bairro, e.cidade + '/' + e.uf, 'CEP ' + e.cep].filter(x => x.trim()).join(', '); }
+  function supTxt(n) { return n.superficie + ' (' + B.superficies[n.superficie] + ')' + (n.superficie === 'Madeira Ripada' ? ', espaçamento ' + n.ripaEspaco : ''); }
+
+  function renderReview() {
+    const f = S.fat;
+    const tr = (k, v) => '<tr><td>' + esc(k) + '</td><td>' + v + '</td></tr>';
+    let h = '<h1>Revise antes de enviar</h1><p class="sub">Confira com atenção. Depois de confirmado, isto vai para a fabricação e para a nota fiscal, e você recebe uma cópia por e-mail.</p>';
+    h += '<div class="card rev"><h2><span>Pedido</span><button class="btn sec small" data-act="goto1">Corrigir</button></h2><table>' +
+      (S.orc ? tr('Orçamento', esc(S.orc)) : '') + tr('Projeto', esc(S.projeto)) + tr('Quantidade de neons', S.neons.length) + '</table></div>';
+    h += '<div class="card rev"><h2><span>Faturamento</span><button class="btn sec small" data-act="goto1">Corrigir</button></h2><table>' +
+      tr('Solicitante', esc(f.solicitante)) + tr('WhatsApp', esc(f.whatsapp)) + tr('E-mail', esc(f.emailContato)) +
+      tr(f.tipo === 'PJ' ? 'CNPJ' : 'CPF', esc(f.doc)) + tr(f.tipo === 'PJ' ? 'Razão social' : 'Nome completo', esc(f.nomeRazao)) +
+      (f.tipo === 'PJ' ? tr('Inscrição Estadual', esc(f.ieSituacao + (f.ieSituacao === 'Contribuinte' ? ': ' + f.ie : ''))) : '') +
+      tr('E-mail para NF', esc(f.emailNfIgual ? f.emailContato : f.emailNF)) + tr('Endereço de faturamento', esc(endTxt(f.end))) +
+      tr('Entrega', esc(f.entrega === 'Outro endereço' ? endTxt(f.endEntrega) : f.entrega)) + '</table></div>';
+    S.neons.forEach((n, i) => {
+      h += '<div class="card rev"><h2><span>Neon ' + (i + 1) + (n.identificacao ? ': ' + esc(n.identificacao) : '') + '</span><button class="btn sec small" data-act="goto2" data-i="' + i + '">Corrigir</button></h2><table>' +
+        tr('Cor(es)', n.cores.map(c => '<span class="dot" style="display:inline-block;vertical-align:middle;width:12px;height:12px;background:' + COLOR_HEX[c] + '"></span> ' + esc(c)).join('<br>')) +
+        (n.cores.length > 1 ? tr('Onde vai cada cor', esc(n.coresOnde)) : '') +
+        tr('Superfície / fixação', esc(supTxt(n))) +
+        tr('Saída do fio (vista de frente)', '<b>' + esc(n.ladoFio) + '</b>') +
+        tr('Comprimento do fio', esc(B.fioPadrao) + ' (padrão)') +
+        tr('Cor do fio', esc(n.corFio)) +
+        (n.foto ? tr('Foto do local', '<img class="thumb" src="data:' + n.foto.mimeType + ';base64,' + n.foto.base64 + '">') : '') +
+        (n.obs ? tr('Observações', esc(n.obs)) : '') + '</table></div>';
+    });
+    h += '<label class="confirm"><input type="checkbox" data-act="confirm"' + (S.confirmado ? ' checked' : '') + '><span>' + esc(B.textoConfirmacao) + '</span></label>';
+    h += '<div class="actions"><button class="btn sec" data-act="back">Voltar</button><button class="btn" data-act="send"' + (!S.confirmado || sending ? ' disabled' : '') + '>' + (sending ? 'Enviando...' : 'Confirmar e enviar') + '</button></div>';
+    return h;
+  }
+
+  function renderOk() {
+    app.innerHTML = header() + '<div class="card ok"><div class="big">✅</div><h1>Pedido confirmado!</h1>' +
+      '<p>Protocolo <b>' + esc(result.protocolo) + '</b>' + (result.versao > 1 ? ' (versão ' + result.versao + ')' : '') + '<br>' + esc(result.dataHora) + '</p>' +
+      '<p class="sub">Enviamos uma cópia com tudo o que você confirmou para <b>' + esc(result.emails.join(', ')) + '</b>. Se não encontrar, olhe a caixa de spam.</p>' +
+      '<p class="sub">Obrigado! A equipe ' + esc(B.brand.nome) + ' segue com você pelo WhatsApp.</p></div>';
+    window.scrollTo(0, 0);
+  }
+
+  /* ---------- eventos ---------- */
+  function setPath(obj, path, val) { const p = path.split('.'); let o = obj; for (let i = 0; i < p.length - 1; i++) o = o[p[i]]; o[p[p.length - 1]] = val; }
+  function getPath(obj, path) { return path.split('.').reduce((o, k) => o[k], obj); }
+
+  function bind() {
+    app.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', () => {
+      const k = el.dataset.k;
+      if (k === 'fat.whatsapp') el.value = maskTel(el.value);
+      if (k === 'fat.doc') { el.value = maskDoc(el.value, S.fat.tipo); }
+      setPath(S, k, el.value); saveDraft();
+      if (k === 'fat.doc' && S.fat.tipo === 'PJ' && digits(el.value).length === 14 && validCnpj(el.value)) buscaCnpj(el.value);
+    }));
+    app.querySelectorAll('[data-n]').forEach(el => el.addEventListener('input', () => { S.neons[+el.dataset.n][el.dataset.f] = el.value; saveDraft(); }));
+    app.querySelectorAll('[data-e]').forEach(el => el.addEventListener('input', () => {
+      const path = el.dataset.e; const field = path.split('.')[1];
+      if (field === 'cep') el.value = maskCep(el.value);
+      if (field === 'uf') el.value = el.value.toUpperCase();
+      setPath(S.fat, path, el.value); saveDraft();
+      if (field === 'cep' && digits(el.value).length === 8) buscaCep(path.split('.')[0], el.value);
+    }));
+    app.querySelectorAll('[data-foto]').forEach(el => el.addEventListener('change', () => { if (el.files[0]) loadFoto(+el.dataset.foto, el.files[0]); }));
+    app.querySelectorAll('[data-act]').forEach(el => el.addEventListener(el.type === 'checkbox' ? 'change' : 'click', ev => { if (el.type !== 'checkbox') ev.preventDefault(); act(el); }));
+  }
+
+  function act(el) {
+    const a = el.dataset.act, i = +el.dataset.i, v = el.dataset.v;
+    const n = S.neons[i];
+    topError = '';
+    switch (a) {
+      case 'cor': { const k = n.cores.indexOf(v); if (k >= 0) n.cores.splice(k, 1); else n.cores.push(v); break; }
+      case 'sup': n.superficie = v; break;
+      case 'lado': n.ladoFio = v; break;
+      case 'fio': n.corFio = v; break;
+      case 'rmFoto': n.foto = null; break;
+      case 'addNeon': S.neons.push(newNeon()); errors = {}; render(); scrollToEl('neon' + (S.neons.length - 1)); saveDraft(); return;
+      case 'rmNeon': if (confirmRemove(i)) S.neons.splice(i, 1); errors = {}; break;
+      case 'tipo': if (S.fat.tipo !== v) { S.fat.tipo = v; S.fat.doc = ''; cnpjMsg = ''; } break;
+      case 'ies': S.fat.ieSituacao = v; break;
+      case 'entrega': S.fat.entrega = v; break;
+      case 'nfIgual': S.fat.emailNfIgual = el.checked; break;
+      case 'confirm': S.confirmado = el.checked; break;
+      case 'next1': errors = validateDados(); if (Object.keys(errors).length) { topError = 'Faltam algumas informações. Veja os campos em vermelho.'; render(); scrollFirstErr(); return; } S.step = 2; errors = {}; break;
+      case 'next2': errors = validateNeons(); if (Object.keys(errors).length) { topError = 'Faltam algumas informações. Veja os campos em vermelho.'; render(); scrollFirstErr(); return; } S.step = 3; S.confirmado = false; errors = {}; break;
+      case 'back': S.step = Math.max(1, S.step - 1); errors = {}; break;
+      case 'goto1': S.step = 1; errors = {}; break;
+      case 'goto2': S.step = 2; errors = {}; render(); if (!isNaN(i)) scrollToEl('neon' + i); else window.scrollTo(0, 0); saveDraft(); return;
+      case 'send': return send();
+    }
+    saveDraft();
+    const y = window.scrollY; const stepChanged = ['next1', 'next2', 'back', 'goto1'].indexOf(a) >= 0;
+    render(); window.scrollTo(0, stepChanged ? 0 : y);
+  }
+  function confirmRemove(i) { const n = S.neons[i]; return !(n.cores.length || n.superficie || n.identificacao) || window.confirm('Remover o Neon ' + (i + 1) + '?'); }
+  function scrollToEl(id) { const el = document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  function scrollFirstErr() { const el = app.querySelector('.err'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+
+  function buscaCnpj(doc) {
+    cnpjMsg = 'Buscando dados do CNPJ...'; render(); focusDoc();
+    google.script.run.withSuccessHandler(r => {
+      if (r && r.ok) {
+        S.fat.nomeRazao = r.razao || S.fat.nomeRazao;
+        Object.assign(S.fat.end, { cep: maskCep(r.cep), logradouro: r.logradouro, numero: r.numero, complemento: r.complemento, bairro: r.bairro, cidade: r.cidade, uf: r.uf });
+        cnpjMsg = 'Dados preenchidos a partir do cadastro do CNPJ' + (r.situacao ? ' (situação: ' + r.situacao + ')' : '') + '. Confira e corrija se precisar.';
+      } else cnpjMsg = (r && r.erro) || 'Não encontramos o CNPJ. Preencha manualmente.';
+      saveDraft(); render(); focusDoc();
+    }).withFailureHandler(() => { cnpjMsg = 'Consulta indisponível agora. Preencha manualmente.'; render(); }).lookupCnpj(doc);
+  }
+  function focusDoc() { const el = app.querySelector('[data-k="fat.doc"]'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }
+  function buscaCep(which, cep) {
+    google.script.run.withSuccessHandler(r => {
+      if (!r || !r.ok) return;
+      const en = S.fat[which];
+      en.logradouro = r.logradouro || en.logradouro; en.bairro = r.bairro || en.bairro; en.cidade = r.cidade || en.cidade; en.uf = r.uf || en.uf;
+      saveDraft(); const y = window.scrollY; render(); window.scrollTo(0, y);
+      const num = app.querySelector('[data-e="' + which + '.numero"]'); if (num && !en.numero) num.focus();
+    }).lookupCep(cep);
+  }
+
+  function loadFoto(i, file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 1600, sc = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas'); c.width = Math.round(img.width * sc); c.height = Math.round(img.height * sc);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const data = c.toDataURL('image/jpeg', 0.82);
+        S.neons[i].foto = { name: file.name.replace(/\.[^.]+$/, '') + '.jpg', mimeType: 'image/jpeg', base64: data.split(',')[1] };
+        const y = window.scrollY; render(); window.scrollTo(0, y);
+      };
+      img.onerror = () => { topError = 'Não foi possível ler esta imagem. Tente outra foto.'; render(); };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function send() {
+    if (!S.confirmado || sending) return;
+    const e1 = validateNeons(), e2 = validateDados();
+    if (Object.keys(e2).length) { errors = e2; S.step = 1; topError = 'Faltam dados de faturamento.'; render(); scrollFirstErr(); return; }
+    if (Object.keys(e1).length) { errors = e1; S.step = 2; topError = 'Faltam informações do neon.'; render(); scrollFirstErr(); return; }
+    sending = true; render();
+    const f = S.fat;
+    const payload = {
+      marca: B.marca, linkId: B.linkId || '', orc: S.orc, projeto: S.projeto.trim(), confirmado: true,
+      neons: S.neons.map(n => ({ identificacao: n.identificacao.trim(), cores: n.cores.slice(), coresOnde: n.coresOnde.trim(), superficie: n.superficie,
+        ripaEspaco: n.ripaEspaco.trim(), ladoFio: n.ladoFio, corFio: n.corFio, obs: n.obs.trim(), foto: n.foto })),
+      fat: { solicitante: f.solicitante.trim(), whatsapp: f.whatsapp, emailContato: f.emailContato.trim(), emailNF: (f.emailNfIgual ? f.emailContato : f.emailNF).trim(),
+        tipo: f.tipo, doc: f.doc, nomeRazao: f.nomeRazao.trim(), ieSituacao: f.tipo === 'PJ' ? f.ieSituacao : 'Não contribuinte',
+        ie: f.tipo === 'PJ' && f.ieSituacao === 'Contribuinte' ? f.ie.trim() : '', end: f.end,
+        entrega: f.entrega, endEntrega: f.entrega === 'Outro endereço' ? f.endEntrega : null }
+    };
+    google.script.run.withSuccessHandler(r => { sending = false; result = r; clearDraft(); render(); })
+      .withFailureHandler(err => { sending = false; topError = 'Não foi possível enviar: ' + (err && err.message ? err.message : 'tente novamente.'); render(); window.scrollTo(0, 0); })
+      .submitForm(payload);
+  }
+
+  render();
+}
+loadBoot('', startApp);
+</script>
+</body>
+</html>

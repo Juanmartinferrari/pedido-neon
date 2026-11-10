@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gerador de link - Confirmação do pedido</title>
+<meta name="robots" content="noindex">
+<style>
+  body { margin: 0; background: #f4f4f7; color: #1d1d24; font: 16px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 20px 14px 60px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #666; font-size: 14px; margin: 0 0 16px; }
+  .card { background: #fff; border: 1px solid #e2e2ea; border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  label { display: block; font-size: 13px; color: #555; margin: 10px 0 4px; }
+  input, select, textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 9px; border: 1px solid #ccc; font-size: 16px; font-family: inherit; }
+  textarea { min-height: 170px; }
+  .btn { padding: 11px 16px; border-radius: 10px; border: 0; background: #ff2d95; color: #fff; font-weight: 700; font-size: 15px; cursor: pointer; margin-top: 12px; }
+  .btn:disabled { opacity: .5; }
+  .ok { color: #148a4a; font-size: 13px; margin-left: 8px; }
+  .err { color: #c0213f; font-size: 14px; margin-top: 8px; }
+  .hint { color: #777; font-size: 13px; margin-top: 6px; }
+  #res { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Gerador de link: confirmação do pedido</h1>
+  <p class="sub">Orçamento, projeto, WhatsApp e entrega ficam fixos no link: o cliente vê, mas não consegue alterar.</p>
+  <div class="card">
+    <label>Marca</label>
+    <select id="marca"></select>
+    <label>Nº do orçamento *</label>
+    <input id="orc" placeholder="Ex.: 1234">
+    <label>Nome do projeto *</label>
+    <input id="projeto" placeholder="Ex.: Logo da recepção">
+    <label>WhatsApp do cliente *</label>
+    <input id="whatsapp" type="tel" placeholder="(11) 90000-0000">
+    <label>Entrega *</label>
+    <select id="entrega"><option value="Retirada">Retirada na loja</option><option value="Entrega">Entrega (cliente informa o endereço)</option></select>
+    <label>Nome do cliente / empresa (para a mensagem)</label>
+    <input id="cliente" placeholder="Ex.: Café Aurora">
+    <button class="btn" id="gerar">Gerar link</button>
+    <div class="err" id="err"></div>
+  </div>
+  <div class="card" id="res">
+    <label>Link (único para este orçamento)</label>
+    <input id="link" readonly>
+    <button class="btn" data-copy="link">Copiar link</button><span class="ok" id="ok-link"></span>
+    <label>Mensagem para o cliente</label>
+    <textarea id="msg"></textarea>
+    <button class="btn" data-copy="msg">Copiar mensagem</button><span class="ok" id="ok-msg"></span>
+    <div class="hint">Cada link fica registrado na aba "Links" da planilha de confirmações.</div>
+  </div>
+</div>
+<script>
+window.API_URL = 'https://script.google.com/macros/s/AKfycbwCLIBXf6us1qhj-F1BVNx2SPsZOIiWiPRf3g3U7Dn63m-AZmBky9G2csiBilsvPGg/exec';
+(function () {
+  function R() { this.s = null; this.f = null; }
+  R.prototype.withSuccessHandler = function (s) { this.s = s; return this; };
+  R.prototype.withFailureHandler = function (f) { this.f = f; return this; };
+  ['lookupCnpj', 'lookupCep', 'submitForm', 'createLink'].forEach(function (fn) {
+    R.prototype[fn] = function () {
+      var self = this, args = Array.prototype.slice.call(arguments);
+      fetch(window.API_URL, { method: 'POST', credentials: 'omit', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fn: fn, args: args }) })
+        .then(function (r) { return r.json(); })
+        .then(function (j) { if (j.ok) { self.s && self.s(j.result); } else { self.f && self.f(new Error(j.error)); } })
+        .catch(function (e) { self.f && self.f(new Error('Falha de conexão. Verifique sua internet e tente de novo.')); });
+    };
+  });
+  window.google = { script: {} };
+  Object.defineProperty(window.google.script, 'run', { get: function () { return new R(); } });
+  window.loadBoot = function (extra, cb) {
+    var q = location.search ? location.search.slice(1) + '&' : '';
+    fetch(window.API_URL + '?' + q + 'api=1' + (extra || ''), { credentials: 'omit', redirect: 'follow' })
+      .then(function (r) { return r.json(); }).then(cb)
+      .catch(function () { var a = document.getElementById('app') || document.body; a.innerHTML = '<p style="color:#ff8;padding:30px;text-align:center;font-family:Arial">Não foi possível carregar o formulário. Atualize a página.</p>'; });
+  };
+})();
+</script>
+<script>
+loadBoot('&gerar=1', function (BOOT) {
+  const $ = id => document.getElementById(id);
+  const sel = $('marca');
+  Object.keys(BOOT.brands).forEach(k => { const o = document.createElement('option'); o.value = k; o.textContent = BOOT.brands[k].nome; sel.appendChild(o); });
+  $('whatsapp').addEventListener('input', e => {
+    const d = e.target.value.replace(/\D/g, '').slice(0, 11);
+    e.target.value = d.length > 10 ? d.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3') : d.replace(/(\d{2})(\d{0,4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+  });
+  $('gerar').addEventListener('click', () => {
+    $('err').textContent = '';
+    const d = { marca: sel.value, orc: $('orc').value.trim(), projeto: $('projeto').value.trim(), whatsapp: $('whatsapp').value.trim(), entrega: $('entrega').value, cliente: $('cliente').value.trim() };
+    if (!d.orc || !d.projeto || d.whatsapp.replace(/\D/g, '').length < 10) { $('err').textContent = 'Preencha orçamento, projeto e WhatsApp com DDD.'; return; }
+    $('gerar').disabled = true; $('gerar').textContent = 'Gerando...';
+    google.script.run.withSuccessHandler(r => {
+      $('gerar').disabled = false; $('gerar').textContent = 'Gerar link';
+      $('link').value = r.url;
+      $('msg').value = 'Olá' + (d.cliente ? ', ' + d.cliente : '') + '! Para darmos sequência ao seu pedido (orçamento ' + d.orc + ', ' + d.projeto + '), preciso que você confirme seus dados de faturamento e as características do neon neste formulário rápido:\n\n' +
+        r.url + '\n\nLeva poucos minutos. Antes de enviar, você revisa tudo e recebe uma cópia por e-mail. Essas informações vão para a nossa ordem de fabricação e para a nota fiscal.\n\nQualquer dúvida, é só chamar!';
+      $('res').style.display = 'block';
+    }).withFailureHandler(e => {
+      $('gerar').disabled = false; $('gerar').textContent = 'Gerar link';
+      $('err').textContent = (e && e.message) || 'Erro ao gerar o link.';
+    }).createLink(d);
+  });
+  document.querySelectorAll('[data-copy]').forEach(b => b.addEventListener('click', () => {
+    const el = $(b.dataset.copy); el.select();
+    const done = () => { $('ok-' + b.dataset.copy).textContent = 'Copiado!'; setTimeout(() => $('ok-' + b.dataset.copy).textContent = '', 2000); };
+    if (navigator.clipboard) navigator.clipboard.writeText(el.value).then(done, () => { document.execCommand('copy'); done(); });
+    else { document.execCommand('copy'); done(); }
+  }));
+});
+</script>
+</body>
+</html>
