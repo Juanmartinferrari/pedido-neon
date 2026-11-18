@@ -281,7 +281,8 @@ document.title = BOOT.brand.nome + ' - Confirmação do pedido';
 
     h += '<div class="q">1. Cor(es) do neon * <small>(pode marcar mais de uma)</small></div><div class="chips">' +
       B.cores.map(c => '<button type="button" class="chip' + (n.cores.indexOf(c) >= 0 ? ' on' : '') + '" data-act="cor" data-i="' + i + '" data-v="' + esc(c) + '"><span class="dot" style="background:' + COLOR_HEX[c] +
-        ';box-shadow:0 0 8px ' + glowHex(c) + '"></span>' + esc(c) + '</button>').join('') + '</div>' + errHtml('n' + i + 'cores');
+        ';box-shadow:0 0 8px ' + glowHex(c) + '"></span>' + esc(c) + (c === 'RGB' ? ' <small style="opacity:.8">(custo extra)</small>' : '') + '</button>').join('') + '</div>' +
+      (n.cores.indexOf('RGB') >= 0 ? '<div class="hint" style="margin-top:8px;padding:8px 12px;border:1px solid #FFD400;border-radius:8px;color:#FFD400;font-size:14px">⚠️ O neon RGB tem custo extra em relação às cores fixas. Se ele não estiver no seu orçamento, fale com o vendedor antes de confirmar.</div>' : '') + errHtml('n' + i + 'cores');
     if (n.cores.length > 1) h += '<label class="f">Onde vai cada cor? *</label><textarea data-n="' + i + '" data-f="coresOnde" placeholder="Ex.: letras em Rosa, contorno do coração em Branco Frio">' + esc(n.coresOnde) + '</textarea>' + errHtml('n' + i + 'onde');
 
     h += '<div class="q">2. A placa vai ser fixada em qual superfície? *</div><div class="opts">' +
@@ -377,7 +378,7 @@ document.title = BOOT.brand.nome + ' - Confirmação do pedido';
         : tr('Entrega', esc(f.entrega === 'Outro endereço' ? endTxt(f.endEntrega) : f.entrega))) + '</table></div>';
     S.neons.forEach((n, i) => {
       h += '<div class="card rev"><h2><span>Neon ' + (i + 1) + (n.identificacao ? ': ' + esc(n.identificacao) : '') + '</span><button class="btn sec small" data-act="goto2" data-i="' + i + '">Corrigir</button></h2><table>' +
-        tr('Cor(es)', n.cores.map(c => '<span class="dot" style="display:inline-block;vertical-align:middle;width:12px;height:12px;border-radius:50%;background:' + COLOR_HEX[c] + '"></span> ' + esc(c)).join('<br>')) +
+        tr('Cor(es)', n.cores.map(c => '<span class="dot" style="display:inline-block;vertical-align:middle;width:12px;height:12px;border-radius:50%;background:' + COLOR_HEX[c] + '"></span> ' + esc(c) + (c === 'RGB' ? ' (custo extra)' : '')).join('<br>')) +
         (n.cores.length > 1 ? tr('Onde vai cada cor', esc(n.coresOnde)) : '') +
         tr('Superfície / fixação', esc(supTxt(n))) +
         tr('Saída do fio (vista de frente)', '<b>' + esc(n.ladoFio) + '</b>') +
